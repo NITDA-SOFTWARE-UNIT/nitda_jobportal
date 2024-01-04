@@ -24,7 +24,6 @@ class User(db.Model):
     username = db.Column(db.String(32), index = True)
     password_hash = db.Column(db.String(64))
 
-
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
 
