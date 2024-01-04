@@ -57,6 +57,13 @@ def verify_password(username_or_token, password):
     g.user = user
     return True
 
+@app.route('/api/users/<int:id>')
+def get_user(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    return jsonify({'username': user.username})
+
 @app.route('/api/register', methods=['POST'])
 def register():
     username = request.json.get('username') 
@@ -78,7 +85,7 @@ def register():
 @auth.login_required
 def get_token():
     token = g.user.generate_auth_token(600)
-    return jsonify({ 'token': token.decode('ascii'), 'duration': 600 })
+    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600 })
 
 
 @app.route('/api/dothis', methods=['GET'])
