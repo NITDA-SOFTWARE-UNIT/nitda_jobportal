@@ -1,18 +1,38 @@
 import os
 import time
-from flask import Flask, abort, request, jsonify, g, url_for
+from flask import Flask, abort, request, jsonify, g, url_for,session
+from flask import Flask, abort, request, jsonify, g, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_httpauth import HTTPBasicAuth
 import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
+import bcrypt 
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
+from datetime import datetime
 
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired
+import random
+import string
 #Initialize variables
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'use a random string to construct the hash'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=1)  # Session timeout set to 20 minute
 
+app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
+app.config['MAIL_PORT'] = 2525
+app.config['MAIL_USERNAME'] = 'be0a6c784846e6'
+app.config['MAIL_PASSWORD'] = 'b03e20aa793568'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
+
+mail = Mail(app)
+s = URLSafeTimedSerializer('Thisisasecret!')
 # Extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
@@ -25,6 +45,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(64))
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
+
+
+
 
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -139,12 +162,77 @@ def register():
 
     return (jsonify({'username': user.email}), 201)
 
+# Login endpoint with session management
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    user = User.query.filter_by(email=email).first()
 
+    if ((user != None) and (user.is_verified ==1) and (user.email ==email) and (user.verify_password(password))):  # Check hashed password
+        token = generate_token(email)
+        session['token'] = token
+        return jsonify({'message': 'Logged in successfully!', 'token': token})
+
+    # Generate a token for the authenticated user
+     
+    
+    # Store the token in the session
+      # Make the session permanent (20 minutes)
+    return jsonify({'message': 'Invalid credentials!'}), 401
+    
+
+    
+
+# Logout endpoint to terminate session
+@app.route('/api/logout', methods=['GET'])
+def logout():
+
+    session.pop('token', None)  # Remove the token from the session
+    print(session.pop('token', None))
+
+
+    return jsonify({'message': 'Logged out successfully!'})
+
+
+@app.route('/api/check-token', methods=['POST'])
+def check_token():
+    data = request.get_json()
+    token = data.get('token')
+
+    if not token:
+        return jsonify({'message': 'Token is required!'}), 400
+
+    try:
+        s = Serializer(app.config['SECRET_KEY'])
+        # Decode the token without verifying
+        data = s.loads(token, return_header=True)
+        
+        # Extract the token's expiration time from its header
+        expiration_time = data[1]['exp']
+
+        # Get the current time
+        current_time = datetime.utcnow()
+
+        # Check if the token has expired
+        if expiration_time < current_time.timestamp():
+            return jsonify({'message': 'Token has expired!', 'expired': True})
+        else:
+            return jsonify({'message': 'Token is valid!', 'expired': False})
+
+    except SignatureExpired:
+        return jsonify({'message': 'Token has expired!', 'expired': True}), 401
+    except BadSignature:
+        return jsonify({'message': 'Invalid token!', 'expired': True}), 401
 @app.route('/api/login')
 @auth.login_required
 def get_token():
+
     token = g.user.generate_auth_token(600)
-    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600 })
+    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600, 'user': g.user.username })
+
+
 
 
 @app.route('/api/dothis', methods=['GET'])
