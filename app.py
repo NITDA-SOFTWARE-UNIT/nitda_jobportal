@@ -1,10 +1,16 @@
 import os
 import time
+from flask import Flask, abort, request, jsonify, g, url_for,session
 from flask import Flask, abort, request, jsonify, g, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_httpauth import HTTPBasicAuth
 import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
+import bcrypt 
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
+from datetime import datetime
+
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 import random
@@ -15,6 +21,8 @@ app.config['SECRET_KEY'] = 'use a random string to construct the hash'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=1)  # Session timeout set to 20 minute
+
 app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
 app.config['MAIL_PORT'] = 2525
 app.config['MAIL_USERNAME'] = 'be0a6c784846e6'
@@ -38,16 +46,20 @@ class User(db.Model):
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
 
+
+
+
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
     
-    def generate_auth_token(self, expires_in = 600):
+    def generate_auth_token(self, expires_in = 5):
         return jwt.encode(
             { 'id': self.id, 'exp': time.time() + expires_in }, 
             app.config['SECRET_KEY'], algorithm='HS256')
+    
 
     @staticmethod
     def verify_auth_token(token):
@@ -58,13 +70,18 @@ class User(db.Model):
             return 
         return User.query.get(data['id'])
 
+
+
+def generate_token(username):
+        s = Serializer(app.config['SECRET_KEY'], expires_in=500)  # Token expires in 1 hour
+        return s.dumps({"username": username}).decode("utf-8")
+
 @auth.verify_password
-def verify_password(username_or_token, password):
-    # first try token
-    user = User.verify_auth_token(username_or_token)
+def verify_password(username,password):
+   
     # then check for username and password pair
     if not user:
-        user = User.query.filter_by(username = username_or_token).first()
+        user = User.query.filter_by(username = username).first()
         if not user or not user.verify_password(password):
             return False
     g.user = user
@@ -145,7 +162,69 @@ def register():
 
     return (jsonify({'username': user.email}), 201)
 
+# Login endpoint with session management
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    user = User.query.filter_by(email=email).first()
 
+    if ((user != None) and (user.is_verified ==1) and (user.email ==email) and (user.verify_password(password))):  # Check hashed password
+        token = generate_token(email)
+        session['token'] = token
+        return jsonify({'message': 'Logged in successfully!', 'token': token})
+
+    # Generate a token for the authenticated user
+     
+    
+    # Store the token in the session
+      # Make the session permanent (20 minutes)
+    return jsonify({'message': 'Invalid credentials!'}), 401
+    
+
+    
+
+# Logout endpoint to terminate session
+@app.route('/api/logout', methods=['GET'])
+def logout():
+
+    session.pop('token', None)  # Remove the token from the session
+    print(session.pop('token', None))
+
+
+    return jsonify({'message': 'Logged out successfully!'})
+
+
+@app.route('/api/check-token', methods=['POST'])
+def check_token():
+    data = request.get_json()
+    token = data.get('token')
+
+    if not token:
+        return jsonify({'message': 'Token is required!'}), 400
+
+    try:
+        s = Serializer(app.config['SECRET_KEY'])
+        # Decode the token without verifying
+        data = s.loads(token, return_header=True)
+        
+        # Extract the token's expiration time from its header
+        expiration_time = data[1]['exp']
+
+        # Get the current time
+        current_time = datetime.utcnow()
+
+        # Check if the token has expired
+        if expiration_time < current_time.timestamp():
+            return jsonify({'message': 'Token has expired!', 'expired': True})
+        else:
+            return jsonify({'message': 'Token is valid!', 'expired': False})
+
+    except SignatureExpired:
+        return jsonify({'message': 'Token has expired!', 'expired': True}), 401
+    except BadSignature:
+        return jsonify({'message': 'Invalid token!', 'expired': True}), 401
 @app.route('/api/login')
 @auth.login_required
 def get_token():
