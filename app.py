@@ -1,14 +1,10 @@
 import os
 import time
-from flask import Flask, abort, request, jsonify, g, url_for,session
+from flask import Flask, abort, request, jsonify, g, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_httpauth import HTTPBasicAuth
 import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta
-import bcrypt 
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
-from datetime import datetime
 
 #Initialize variables
 app = Flask(__name__)
@@ -16,8 +12,6 @@ app.config['SECRET_KEY'] = 'use a random string to construct the hash'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=1)  # Session timeout set to 20 minute
-
 
 # Extensions
 db = SQLAlchemy(app)
@@ -29,6 +23,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     username = db.Column(db.String(32), index = True)
     password_hash = db.Column(db.String(64))
+    email = db.Column(db.String(100), nullable=False)
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
 
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -68,6 +64,11 @@ def verify_password(username,password):
     g.user = user
     return True
 
+def generate_registration_code():
+    timestamp = str(int(time.time()))
+    random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    return f"NITDA-{timestamp}-{random_chars}"
+
 @app.route('/api/users/<int:id>')
 def get_user(id):
     user = User.query.get(id)
@@ -75,87 +76,75 @@ def get_user(id):
         abort(400)
     return jsonify({'username': user.username})
 
+
+@app.route('/send_token_email', methods=['POST'])
+def send_token_email():
+    email = request.json.get('email')
+    if email is None:
+        abort(400)
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        abort(404)
+    token = s.dumps(email, salt='email-confirm')
+    link = f"http://127.0.0.1:5000/confirm_email/{token}"
+    print(link)
+    msg = Message('Token Resend', sender='certificate@nitda.gov.ng', recipients=[email])
+    msg.body = 'Your token reset link is {}'.format(link)
+    mail.send(msg)
+    return jsonify({'message': 'A new token has been sent.'})
+
+
+
+@app.route('/confirm_email/<token>')
+def confirm_email(token):
+    try:
+        email = s.loads(token, salt='email-confirm', max_age=300)
+    except SignatureExpired:
+        return 'The confirmation link has expired.'
+    user = User.query.filter_by(email=email).first()
+    user.is_verified= True
+    db.session.commit()
+    return 'Done'
+
 @app.route('/api/register', methods=['POST'])
 def register():
-    username = request.json.get('username') 
+    username = generate_registration_code() 
     password = request.json.get('password')
+    confirm_password = request.json.get('confirm_password')
+    email = request.json.get('email')
     # Check for blank requests
-    if username is None or password is None:
-        abort(400)
+    if username is None or password is None or confirm_password is None:
+        abort(400, 'Cannot be blank')
+        # Check that passwords match
+    if password != confirm_password:
+        abort(400, 'The password did not match')
     # Check for existing users
-    if User.query.filter_by(username = username).first() is not None:
-        abort(400)
-    user = User(username = username)
+    if User.query.filter_by(email = email).first() is not None:
+        abort(400, 'User exists')
+    user = User(username = username, email=email)
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
-    return (jsonify({'username': user.username}), 201)
 
-# Login endpoint with session management
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+    token = s.dumps(email, salt='email-confirm')
+    link = f"http://127.0.0.1:5000/confirm_email/{token}"
+    print(link)
+    msg = Message('Confirm Email', sender='certificate@nitda.gov.ng', recipients=[email])
+    msg.body = 'Your verification link is {}'.format(link)
+    mail.send(msg)
+    #if send_activation_email(username, email):
+    #    return jsonify({'status':'ok','message':'Activation mail sent.'}), 2
+    #else:
+    #    return jsonify({'status':'error','message':'Registration failed!'}), 50
 
-    if not username or not password:
-        return jsonify({'message': 'Both username and password are required!'}), 400
-
-    user = User.query.filter_by(username=username).first()
-
-    if not user or not user.verify_password(password):  # Check hashed password
-        return jsonify({'message': 'Invalid credentials!'}), 401
-
-    # Generate a token for the authenticated user
-    token = generate_token(username) 
-    
-    # Store the token in the session
-    session['token'] = token  # Make the session permanent (20 minutes)
-
-    return jsonify({'message': 'Logged in successfully!', 'token': token})
-
-    
-
-# Logout endpoint to terminate session
-@app.route('/api/logout', methods=['GET'])
-def logout():
-
-    session.pop('token', None)  # Remove the token from the session
-    print(session.pop('token', None))
+    return (jsonify({'username': user.email}), 201)
 
 
-    return jsonify({'message': 'Logged out successfully!'})
-
-
-@app.route('/api/check-token', methods=['POST'])
-def check_token():
-    data = request.get_json()
-    token = data.get('token')
-
-    if not token:
-        return jsonify({'message': 'Token is required!'}), 400
-
-    try:
-        s = Serializer(app.config['SECRET_KEY'])
-        # Decode the token without verifying
-        data = s.loads(token, return_header=True)
-        
-        # Extract the token's expiration time from its header
-        expiration_time = data[1]['exp']
-
-        # Get the current time
-        current_time = datetime.utcnow()
-
-        # Check if the token has expired
-        if expiration_time < current_time.timestamp():
-            return jsonify({'message': 'Token has expired!', 'expired': True})
-        else:
-            return jsonify({'message': 'Token is valid!', 'expired': False})
-
-    except SignatureExpired:
-        return jsonify({'message': 'Token has expired!', 'expired': True}), 401
-    except BadSignature:
-        return jsonify({'message': 'Invalid token!', 'expired': True}), 401
+@app.route('/api/login')
+@auth.login_required
+def get_token():
+    token = g.user.generate_auth_token(600)
+    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600 })
 
 
 @app.route('/api/dothis', methods=['GET'])
