@@ -99,6 +99,41 @@ def get_user(id):
         abort(400)
     return jsonify({'username': user.username})
 
+@app.route('/reset_password_email', methods=['POST'])
+def reset_password_email():
+    email = request.json.get('email')
+    if email is None:
+        abort(400)
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        abort(404)
+    token = s.dumps(email, salt='reset-password')
+    link = f"http://127.0.0.1:5000/reset_password/{token}"
+    print(link)
+    msg = Message('Password Reset', sender='certificate@nitda.gov.ng', recipients=[email])
+    msg.body = 'Your password reset link is {}'.format(link)
+    mail.send(msg)
+    return jsonify({'message': 'A password reset link has been sent.'})
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+
+    if request.method == 'POST':
+        password = request.json.get('password')
+        confirm_password = request.json.get('confirm_password')
+        if password != confirm_password:
+            return jsonify({'error': "Passwords do not match."}), 400
+        email = s.loads(token, salt="reset-password")
+        user = User.query.filter_by(email=email).first()
+        user.hash_password(password)
+        db.session.commit()
+        return jsonify({'message': 'Password Reset successfully'})
+    try:
+        email = s.loads(token, salt='reset-password', max_age=300)
+    except SignatureExpired:
+        return 'The confirmation link has expired.'
+    return 'Done'
 
 @app.route('/send_token_email', methods=['POST'])
 def send_token_email():
@@ -115,7 +150,6 @@ def send_token_email():
     msg.body = 'Your token reset link is {}'.format(link)
     mail.send(msg)
     return jsonify({'message': 'A new token has been sent.'})
-
 
 
 @app.route('/confirm_email/<token>')
