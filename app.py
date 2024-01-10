@@ -275,6 +275,12 @@ def do_this():
     return jsonify({ 'message':'It is done {}'.format(g.user.username) })
 
 
+
+
+
+    
+    
+
 if __name__ == "__main__":
     if not os.path.exists('db.sqlite'):
         db.create_all()
