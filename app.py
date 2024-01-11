@@ -1,7 +1,7 @@
 import os
 import time
 from flask import Flask, abort, request, jsonify, g, url_for,session
-from flask import Flask, abort, request, jsonify, g, url_for, session
+from flask_login import LoginManager, current_user, login_user, logout_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from flask_httpauth import HTTPBasicAuth
 import jwt
@@ -10,7 +10,6 @@ from datetime import timedelta
 import bcrypt 
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
 from datetime import datetime
-
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 import random
@@ -36,7 +35,11 @@ s = URLSafeTimedSerializer('Thisisasecret!')
 # Extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
+login_manager = LoginManager(app)
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -78,7 +81,8 @@ def generate_token(username):
 
 @auth.verify_password
 def verify_password(username,password):
-   
+
+    user = User.verify_auth_token(username)
     # then check for username and password pair
     if not user:
         user = User.query.filter_by(username = username).first()
@@ -216,8 +220,23 @@ def login():
       # Make the session permanent (20 minutes)
     return jsonify({'message': 'Invalid credentials!'}), 401
     
-
+@app.route('/api/change_password/<int:id>', methods=['PUT'])
+#@login_required
+def change_password(id):
+    data = request.get_json()
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    if not current_password or not new_password:
+        return jsonify({'message': 'Both current and new passwords are required.'}), 400
     
+    user = User.query.get(id)
+    if not check_password_hash(user.password_hash, current_password):
+        return jsonify({'message': 'Current password is incorrect.'}), 401
+
+    user.hash_password(new_password)
+    db.session.commit()
+
+    return jsonify({'message': 'Password changed successfully.'})
 
 # Logout endpoint to terminate session
 @app.route('/api/logout', methods=['GET'])
@@ -259,6 +278,8 @@ def check_token():
         return jsonify({'message': 'Token has expired!', 'expired': True}), 401
     except BadSignature:
         return jsonify({'message': 'Invalid token!', 'expired': True}), 401
+
+
 @app.route('/api/login')
 @auth.login_required
 def get_token():
@@ -272,7 +293,7 @@ def get_token():
 @app.route('/api/dothis', methods=['GET'])
 @auth.login_required
 def do_this():
-    return jsonify({ 'message':'It is done {}'.format(g.user.username) })
+    return "Hello, {}!".format(auth.current_user())
 
 
 
