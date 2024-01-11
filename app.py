@@ -1,7 +1,7 @@
 import os
 import time
 from flask import Flask, abort, request, jsonify, g, url_for,session
-from flask_login import LoginManager, current_user, login_user, logout_user, login_required
+from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from flask_httpauth import HTTPBasicAuth
 import jwt
@@ -35,13 +35,17 @@ s = URLSafeTimedSerializer('Thisisasecret!')
 # Extensions
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
-login_manager = LoginManager(app)
+
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+        # since the user_id is just the primary key of our user table, use it in the query for the user
+        return User.query.get(int(user_id))
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key = True)
     username = db.Column(db.String(32), index = True)
@@ -49,8 +53,17 @@ class User(db.Model):
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
 
+    def is_active(self):
+        return True
 
+    def is_authenticated(self):
+        return True
 
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
 
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -102,6 +115,14 @@ def get_user(id):
     if not user:
         abort(400)
     return jsonify({'username': user.username})
+
+
+@app.route('/get_all_users', methods=['GET'])
+@login_required
+def get_all_users():
+    users = User.query.order_by(User.id).all()
+    data = {'User': [users.username for users in users]}
+    return jsonify(data)
 
 @app.route('/reset_password_email', methods=['POST'])
 def reset_password_email():
@@ -201,7 +222,7 @@ def register():
     return (jsonify({'username': user.email}), 201)
 
 # Login endpoint with session management
-@app.route('/api/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email')
@@ -210,8 +231,10 @@ def login():
 
     if ((user != None) and (user.is_verified ==1) and (user.email ==email) and (user.verify_password(password))):  # Check hashed password
         token = generate_token(email)
-        session['token'] = token
-        return jsonify({'message': 'Logged in successfully!', 'token': token})
+        #session['token'] = token
+        login_user(user)
+        print(current_user.username)
+        return jsonify({'message': 'Logged in successfully!'})
 
     # Generate a token for the authenticated user
      
@@ -219,34 +242,42 @@ def login():
     # Store the token in the session
       # Make the session permanent (20 minutes)
     return jsonify({'message': 'Invalid credentials!'}), 401
-    
-@app.route('/api/change_password/<int:id>', methods=['PUT'])
-#@login_required
-def change_password(id):
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logged out successfully!'})
+
+
+
+@app.route('/api/change_password', methods=['PUT'])
+@login_required
+def change_password():
     data = request.get_json()
     current_password = data.get('current_password')
     new_password = data.get('new_password')
     if not current_password or not new_password:
         return jsonify({'message': 'Both current and new passwords are required.'}), 400
     
-    user = User.query.get(id)
-    if not check_password_hash(user.password_hash, current_password):
+    #user = current_user.id
+    if not check_password_hash(current_user.password_hash, current_password):
         return jsonify({'message': 'Current password is incorrect.'}), 401
 
-    user.hash_password(new_password)
+    current_user.hash_password(new_password)
     db.session.commit()
 
     return jsonify({'message': 'Password changed successfully.'})
 
 # Logout endpoint to terminate session
-@app.route('/api/logout', methods=['GET'])
-def logout():
+#@app.route('/api/logout', methods=['GET'])
+#def logout():
 
-    session.pop('token', None)  # Remove the token from the session
-    print(session.pop('token', None))
+#    session.pop('token', None)  # Remove the token from the session
+#   print(session.pop('token', None))
 
 
-    return jsonify({'message': 'Logged out successfully!'})
+#    return jsonify({'message': 'Logged out successfully!'})
 
 
 @app.route('/api/check-token', methods=['POST'])
@@ -280,20 +311,21 @@ def check_token():
         return jsonify({'message': 'Invalid token!', 'expired': True}), 401
 
 
-@app.route('/api/login')
-@auth.login_required
-def get_token():
+#@app.route('/api/login')
+#@auth.login_required
+#def get_token():
 
-    token = g.user.generate_auth_token(600)
-    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600, 'user': g.user.username })
+#    token = g.user.generate_auth_token(600)
+#    return jsonify({ 'token': token.encode().decode('ascii'), 'duration': 600, 'user': g.user.username })
 
 
 
 
 @app.route('/api/dothis', methods=['GET'])
-@auth.login_required
+@login_required
 def do_this():
-    return "Hello, {}!".format(auth.current_user())
+    print(current_user.username)
+    return jsonify({'user': current_user.username })
 
 
 
