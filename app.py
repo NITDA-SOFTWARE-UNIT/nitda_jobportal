@@ -52,6 +52,57 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(64))
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+    def hash_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+    def generate_auth_token(self, expires_in = 5):
+        return jwt.encode(
+            { 'id': self.id, 'exp': time.time() + expires_in }, 
+            app.config['SECRET_KEY'], algorithm='HS256')
+    
+
+    @staticmethod
+    def verify_auth_token(token):
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'],
+            algorithm=['HS256'])
+        except:
+            return 
+        return User.query.get(data['id'])
+
+def generate_token(username):
+        s = Serializer(app.config['SECRET_KEY'], expires_in=500)  # Token expires in 1 hour
+        return s.dumps({"username": username}).decode("utf-8")
+
+
+class Role(UserMixin, db.Model):
+    __tablename__ = 'jobroles'
+    id = db.Column(db.Integer, primary_key = True)
+    role_name = db.Column(db.String(100),nullable=False)
+    role_status =  db.Column(db.Boolean, nullable=False, default=False)
+
+#with app.app_context():
+ #   db.create_all()
 
     def is_active(self):
         return True
@@ -88,9 +139,6 @@ class User(UserMixin, db.Model):
 
 
 
-def generate_token(username):
-        s = Serializer(app.config['SECRET_KEY'], expires_in=500)  # Token expires in 1 hour
-        return s.dumps({"username": username}).decode("utf-8")
 
 @auth.verify_password
 def verify_password(username,password):
@@ -108,6 +156,64 @@ def generate_registration_code():
     timestamp = str(int(time.time()))
     random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     return f"NITDA-{timestamp}-{random_chars}"
+
+
+@app.route('/api/create_admin',methods=['POST'])
+def create_admin():
+    data = request.get_json()
+    email=data.get('email')
+    password=data.get('password')
+    username=data.get('name')
+    if not email or not password:
+        return jsonify({'message': 'Both username and password are required.'}), 400
+    user = User.query.filter_by(email=email).first()
+    if user:
+        return jsonify({'message' : 'Admin with this email already exists.'}), 409
+    new_admin= User(email=email,username=username)
+    new_admin.hash_password(password)
+    new_admin.is_admin=True
+    new_admin.is_verified=True
+    db.session.add(new_admin)
+    db.session.commit()
+    return jsonify({'message' :'Admin created successfully!'})
+
+
+@app.route('/api/add_role',methods=['POST'])
+@login_required
+def add_role():
+    data = request.get_json()
+    role_name=data.get('role_name')
+    if not role_name :
+        return jsonify({'message': 'Role name Required'}), 400
+    user = current_user
+    if not user.is_admin:
+        return jsonify({'message' : 'Only Admin can create job role'}), 409
+    if Role.query.filter_by(role_name = role_name).first() is not None:
+        return jsonify({'message': 'Role Exists'}), 400   
+    new_role= Role(role_name=role_name)
+    db.session.add(new_role)
+    db.session.commit()
+    return jsonify({'message' :'New Job role created successfully!'})
+
+
+@app.route('/api/status/<int:id>',methods=['GET','POST'])
+@login_required
+def update_role_status(id):
+    user = current_user
+    role=Role.query.filter_by(id=id).first()
+    if user.is_admin:  
+        if role.role_status ==False:
+            role.role_status=1
+            db.session.commit()
+            return jsonify({'message': 'Role is activated'}), 400
+        else:
+            role.role_status=0
+            db.session.commit()
+            return jsonify({'message' : 'Role is now deactivated'})
+        
+    return jsonify({'message': 'Not an admin'}), 400
+    
+
 
 @app.route('/api/users/<int:id>')
 def get_user(id):
