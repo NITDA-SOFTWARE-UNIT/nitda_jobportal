@@ -230,6 +230,16 @@ def get_all_users():
     data = {'User': [users.username for users in users]}
     return jsonify(data)
 
+@app.route('/get_active_roles', methods=['GET'])
+@login_required
+def get_active_roles():
+    active = 1
+    inactive = 0
+    active_roles = Role.query.filter_by(role_status=active).all()
+    users = User.query.order_by(User.id).all()
+    data = {'Active Roles': [active_roles.role_name for active_roles in active_roles]}
+    return jsonify(data)
+
 @app.route('/reset_password_email', methods=['POST'])
 def reset_password_email():
     email = request.json.get('email')
