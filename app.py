@@ -328,10 +328,6 @@ def do_this():
     return jsonify({'user': current_user.username })
 
 
-
-
-
-    
     
 
 if __name__ == "__main__":
