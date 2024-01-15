@@ -53,6 +53,50 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    #applications = db.relationship('Application', backref='user')
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+    def hash_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+    def generate_auth_token(self, expires_in = 5):
+        return jwt.encode(
+            { 'id': self.id, 'exp': time.time() + expires_in }, 
+            app.config['SECRET_KEY'], algorithm='HS256')
+    
+
+    @staticmethod
+    def verify_auth_token(token):
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'],
+            algorithm=['HS256'])
+        except:
+            return 
+        return User.query.get(data['id'])
+
+class Application(UserMixin, db.Model):
+    __tablename__ = 'applications'
+    id = db.Column(db.Integer, primary_key = True)
+    role_id = db.Column(db.Integer, db.ForeignKey('jobroles.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    app_status = db.Column(db.Boolean, nullable=False, default=False)
 
 #with app.app_context():
 #    db.create_all()
@@ -195,6 +239,27 @@ def add_role():
     db.session.commit()
     return jsonify({'message' :'New Job role created successfully!'})
 
+@app.route('/api/add_application',methods=['POST'])
+@login_required
+def add_application():
+    data = request.get_json()
+    role_id=data.get('role_id')
+    if not role_id:
+        return jsonify({'message': 'Role name Required'}), 400
+    user = current_user
+    Role = Application.query.filter_by(role_id = role_id).first()
+    userapplication = Application.query.filter_by(user_id = user.id).first()
+    print(Role)
+    print(userapplication)
+    if Role and userapplication :
+        return jsonify({'message' : 'You cant apply for the same role'}), 400
+    #if Role.query.filter_by(role_name = role_name).first() is not None:
+    #    return jsonify({'message': 'Role Exists'}), 400   
+    new_application= Application(role_id=role_id, user_id=user.id)
+    db.session.add(new_application)
+    db.session.commit()
+    return jsonify({'message' :'New Application created successfully!'})
+
 
 @app.route('/api/status/<int:id>',methods=['GET','POST'])
 @login_required
@@ -222,6 +287,21 @@ def get_user(id):
         abort(400)
     return jsonify({'username': user.username})
 
+@app.route('/api/get_apps/<int:id>')
+def get_app(id):
+    user = Application.query.filter_by(user_id=current_user.id).all()
+    #if not user:
+    #    abort(400)
+    for i in user:
+        role = i.role_id
+        print(role)
+        rolename = Role.query.filter_by(id=role).first()
+        r_name = rolename.role_name
+        print(r_name)
+    #apps = Application.query.join(Role,Application.role_id==Role.id)
+    return jsonify({'username': 'r_name'})
+
+
 
 @app.route('/get_all_users', methods=['GET'])
 @login_required
@@ -236,7 +316,7 @@ def get_active_roles():
     active = 1
     inactive = 0
     active_roles = Role.query.filter_by(role_status=active).all()
-    users = User.query.order_by(User.id).all()
+    #users = User.query.order_by(User.id).all()
     data = {'Active Roles': [active_roles.role_name for active_roles in active_roles]}
     return jsonify(data)
 
