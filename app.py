@@ -45,6 +45,144 @@ def load_user(user_id):
         # since the user_id is just the primary key of our user table, use it in the query for the user
         return User.query.get(int(user_id))
 
+
+class Verification(UserMixin, db.Model):
+    __tablename__ = 'verification'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    LevelOfEdu = db.Column(db.String(100), nullable=False)
+    UniversityName = db.Column(db.String(100), nullable=False)
+    ProgramOfStudy = db.Column(db.String(100), nullable=False)
+    AwardedDegree = db.Column(db.String(100), nullable=False)
+    Country = db.Column(db.String(100), nullable=False)
+    ClassOfDegree = db.Column(db.String(100), nullable=False)
+    AwardIssueDate = db.Column(db.String(100), nullable=False)
+    QualificationDoc = db.Column(db.String(100), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id   
+
+
+class Documents(UserMixin, db.Model):
+    __tablename__ = 'documents'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    CV = db.Column(db.String(100), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id   
+
+
+
+class coverletter(UserMixin, db.Model):
+    __tablename__ = 'coverletter'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    CoverLetter = db.Column(db.String(100), nullable=False)
+    Cletter = db.Column(db.String(100), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id   
+
+class Education(UserMixin, db.Model):
+    __tablename__ = 'education'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    LevelOfEdu = db.Column(db.String(100), nullable=False)
+    UniversityName = db.Column(db.String(100), nullable=False)
+    ProgramOfStudy = db.Column(db.String(100), nullable=False)
+    AwardedDegree = db.Column(db.String(100), nullable=False)
+    Country = db.Column(db.String(100), nullable=False)
+    ClassOfDegree = db.Column(db.String(100), nullable=False)
+    AwardIssueDate = db.Column(db.String(100), nullable=False)
+    QualificationDoc = db.Column(db.String(100), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id        
+
+class Profile(UserMixin, db.Model):
+    __tablename__ = 'profile'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    FirstName = db.Column(db.String(100), nullable=False)
+    MiddleName = db.Column(db.String(100), nullable=False)
+    FamilyName = db.Column(db.String(100), nullable=False)
+    PreviousFamilyName = db.Column(db.String(100), nullable=True)
+    Gender = db.Column(db.String(100), nullable=False)
+    NIN = db.Column(db.String(100), nullable=False)
+    DOB = db.Column(db.String(100), nullable=False)
+    POB = db.Column(db.String(100), nullable=False)
+    StateOfOrigin = db.Column(db.String(100), nullable=False)
+    LGA = db.Column(db.String(100), nullable=False)
+    Photos = db.Column(db.String(100), nullable=False)
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id        
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key = True)
@@ -200,6 +338,44 @@ def generate_registration_code():
     timestamp = str(int(time.time()))
     random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     return f"NITDA-{timestamp}-{random_chars}"
+
+
+
+
+@app.route('/api/profile',methods=['GET','POST'])
+@login_required
+def profile():
+    if(request.method=='POST'):
+        data = request.form
+        FirstName=data.get('FirstName')
+        MiddleName=data.get('MiddleName')
+        FamilyName=data.get('FamilyName')
+        PreviousFamilyName=data.get('PreviousFamilyName')
+        Gender=data.get('Gender')
+        NIN=data.get('NIN')
+        DOB=data.get('DOB')
+        POB=data.get('POB')
+        StateOfOrigin=data.get('StateOfOrigin')
+        LGA=data.get('LGA')
+        Photos=data.get('Photos')
+        user=User.query.filter_by(id=current_user.id).first()
+        user_id=current_user.id
+
+        # Handle file upload
+        if 'Photos' in request.files:
+            Photos = request.files['Photos']
+            photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username}"
+            Photos.save(photo_path)
+        else:
+            photo_path = None
+
+    new_profile= Profile(user_id=user_id,FirstName=FirstName,MiddleName=MiddleName,FamilyName=FamilyName,
+                         PreviousFamilyName=PreviousFamilyName,Gender=Gender,
+                         NIN=NIN,DOB=DOB,POB=POB,StateOfOrigin=StateOfOrigin,LGA=LGA,Photos=photo_path)
+
+    db.session.add(new_profile)
+    db.session.commit()
+    return jsonify({'message' :'Profile saved successfully'})
 
 
 @app.route('/api/create_admin',methods=['POST'])
