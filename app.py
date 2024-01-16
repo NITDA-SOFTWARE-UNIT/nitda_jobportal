@@ -107,7 +107,7 @@ class Publication(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     NameOfPublication = db.Column(db.String(100), nullable=False)
-    ProofOfPublication = db.Column(db.String(200), nullable=False)
+    ProofOfPublication = db.Column(db.String(500), nullable=False)
 
 
 #with app.app_context():
@@ -449,6 +449,22 @@ def generate_registration_code():
     random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     return f"NITDA-{timestamp}-{random_chars}"
 
+def save_publication(file):
+    if file:
+        user = User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/Maryam Ibrahim Magam/nitda_jobportal/publications/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
+
+def save_reference(file):
+    if file:
+        user = User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/Maryam Ibrahim Magam/nitda_jobportal/references/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
+
 
 @app.route('/api/contact', methods=['GET', 'POST'])
 @login_required
@@ -468,7 +484,65 @@ def contact():
         db.session.commit()
         return jsonify({'message' :'Contact created successfully!'})
 
+@app.route('/api/work_experience', methods=['GET', 'POST'])
+@login_required
+def work_experience():
+    if (request.method == 'POST'):
+        CompanyName = request.json.get('CompanyName')
+        Sector = request.json.get('Sector')
+        Occupation = request.json.get('Occupation')
+        FromDate = request.json.get('FromDate')
+        ToDate = request.json.get('ToDate')
+        CurrentlyEmployed = request.form.get('CurrentlyEmployed')
+        ReasonForLeaving = request.json.get('ReasonForLeaving')
+        if CurrentlyEmployed == True :
+            CurrentlyEmployed = True
+        else: 
+            CurrentlyEmployed = False
+        newWorkExperience = WorkExperience(user_id=current_user.id, CompanyName=CompanyName, Sector=Sector, Occupation=Occupation, FromDate=FromDate,
+                        ToDate=ToDate, CurrentlyEmployed=CurrentlyEmployed, ReasonForLeaving=ReasonForLeaving)
+        db.session.add(newWorkExperience)
+        db.session.commit()
+        return jsonify({'message' :'Work Experience created successfully!'})
 
+
+@app.route('/api/publication', methods=['GET', 'POST'])
+@login_required
+def publication():
+    if(request.method=='POST'):
+        data = request.form
+        NameOfPublication=data.get('NameOfPublication')
+        ProofOfPublication=request.files.get('ProofOfPublication')
+        user=User.query.filter_by(id=current_user.id).first()
+        # Handle file upload
+        publication_path = save_publication(ProofOfPublication)
+
+    newPublication= Publication(user_id=current_user.id,NameOfPublication=NameOfPublication,
+                         ProofOfPublication=publication_path)
+
+    db.session.add(newPublication)
+    db.session.commit()
+    return jsonify({'message' :'Publication created successfully!'})
+
+@app.route('/api/reference', methods=['GET', 'POST'])
+@login_required
+def reference():
+    if (request.method == 'POST'):
+        data = request.form
+        Rname = data.get('Rname')
+        Designation = data.get('Designation')
+        Telephone = data.get('Telephone')
+        Relationship = data.get('Relationship')
+        Organization = data.get('Organization')
+        Email = data.get('Email')
+        Address = data.get('Address')
+        ReferenceLetter =  request.files.get('ReferenceLetter')
+        reference_path = save_reference(ReferenceLetter)
+        newReference = Reference(user_id=current_user.id, Rname=Rname, Designation=Designation, Telephone=Telephone, Relationship=Relationship,
+                        Organization=Organization, Email=Email, Address=Address, ReferenceLetter=reference_path)
+        db.session.add(newReference)
+        db.session.commit()
+        return jsonify({'message' :'Reference created successfully!'})
 
 
 
@@ -494,11 +568,10 @@ def profile():
         # Handle file upload
         if 'Photos' in request.files:
             Photos = request.files['Photos']
-            photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username}"
+            photo_path = f"C:/Users/Maryam Ibrahim Magam/nitda_jobportal/profile_photo/{user.username+Photos.filename}"
             Photos.save(photo_path)
         else:
             photo_path = None
-
     new_profile= Profile(user_id=user_id,FirstName=FirstName,MiddleName=MiddleName,FamilyName=FamilyName,
                          PreviousFamilyName=PreviousFamilyName,Gender=Gender,
                          NIN=NIN,DOB=DOB,POB=POB,StateOfOrigin=StateOfOrigin,LGA=LGA,Photos=photo_path)
