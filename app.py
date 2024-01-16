@@ -166,7 +166,7 @@ class Profile(UserMixin, db.Model):
     POB = db.Column(db.String(100), nullable=False)
     StateOfOrigin = db.Column(db.String(100), nullable=False)
     LGA = db.Column(db.String(100), nullable=False)
-    Photos = db.Column(db.String(100), nullable=False)
+    Photos = db.Column(db.String(200), nullable=False)
 
 #with app.app_context():
 #    db.create_all()
@@ -376,6 +376,43 @@ def profile():
     db.session.add(new_profile)
     db.session.commit()
     return jsonify({'message' :'Profile saved successfully'})
+
+
+
+
+@app.route('/api/education',methods=['GET','POST'])
+@login_required
+def education():
+    if(request.method=='POST'):
+        data = request.form
+        LevelOfEdu=data.get('FirstName')
+        UniversityName=data.get('MiddleName')
+        ProgramOfStudy=data.get('FamilyName')
+        AwardedDegree=data.get('PreviousFamilyName')
+        Country=data.get('Gender')
+        ClassOfDegree=data.get('NIN')
+        AwardIssueDate=data.get('DOB')
+        QualificationDoc=data.get('POB')
+
+        user=User.query.filter_by(id=current_user.id).first()
+        user_id=current_user.id
+
+        # Handle file upload
+        if 'Photos' in request.files:
+            Photos = request.files['Photos']
+            photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username}"
+            Photos.save(photo_path)
+        else:
+            photo_path = None
+
+    new_profile= Profile(user_id=user_id,FirstName=FirstName,MiddleName=MiddleName,FamilyName=FamilyName,
+                         PreviousFamilyName=PreviousFamilyName,Gender=Gender,
+                         NIN=NIN,DOB=DOB,POB=POB,StateOfOrigin=StateOfOrigin,LGA=LGA,Photos=photo_path)
+
+    db.session.add(new_profile)
+    db.session.commit()
+    return jsonify({'message' :'Profile saved successfully'})
+
 
 
 @app.route('/api/create_admin',methods=['POST'])
