@@ -46,6 +46,116 @@ def load_user(user_id):
         return User.query.get(int(user_id))
 
 
+class Contact(UserMixin, db.Model):
+    __tablename__ = 'contacts'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    email = db.Column(db.String(100), nullable=False)
+    address = db.Column(db.String(500), nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    PostalCode = db.Column(db.String(100), nullable=True)
+    TelephoneNo = db.Column(db.String(100), nullable=False)
+    Ename = db.Column(db.String(100), nullable=False)
+    Eemail = db.Column(db.String(100), nullable=False)
+    Etelephone = db.Column(db.String(100), nullable=False)
+    Erelationship = db.Column(db.String(100), nullable=False)
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+class WorkExperience(UserMixin, db.Model):
+    __tablename__ = 'workexperience'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    CompanyName = db.Column(db.String(100), nullable=False)
+    Sector = db.Column(db.String(100), nullable=False)
+    Occupation = db.Column(db.String(100), nullable=False)
+    FromDate = db.Column(db.String(100), nullable=False)
+    ToDate = db.Column(db.String(100), nullable=False)
+    CurrentlyEmployed = db.Column(db.Boolean, nullable=False, default=False)
+    ReasonForLeaving = db.Column(db.String(500), nullable=False)
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+class Publication(UserMixin, db.Model):
+    __tablename__ = 'publications'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    NameOfPublication = db.Column(db.String(100), nullable=False)
+    ProofOfPublication = db.Column(db.String(200), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+class Reference(UserMixin, db.Model):
+    __tablename__ = 'references'
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    Rname = db.Column(db.String(100), nullable=False)
+    Designation = db.Column(db.String(100), nullable=False)
+    Telephone = db.Column(db.String(100), nullable=False)
+    Relationship = db.Column(db.String(100), nullable=False)
+    Organization = db.Column(db.String(100), nullable=False)
+    Email = db.Column(db.String(100), nullable=False)
+    Address = db.Column(db.String(100), nullable=False)
+    ReferenceLetter = db.Column(db.String(200), nullable=False)
+
+
+#with app.app_context():
+#    db.create_all()
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
+
+
 class Verification(UserMixin, db.Model):
     __tablename__ = 'verification'
     id = db.Column(db.Integer, primary_key = True)
@@ -340,6 +450,26 @@ def generate_registration_code():
     return f"NITDA-{timestamp}-{random_chars}"
 
 
+@app.route('/api/contact', methods=['GET', 'POST'])
+@login_required
+def contact():
+    if (request.method == 'POST'):
+        address = request.json.get('address')
+        city = request.json.get('city')
+        PostalCode = request.json.get('PostalCode')
+        TelephoneNo = request.json.get('TelephoneNo')
+        Ename = request.json.get('Ename')
+        Eemail = request.json.get('Eemail')
+        Etelephone = request.json.get('Etelephone')
+        Erelationship =  request.json.get('Erelationship')
+        newContact = Contact(user_id=current_user.id, email=current_user.email, address=address, city=city, PostalCode=PostalCode,
+                        TelephoneNo=TelephoneNo, Ename=Ename, Eemail=Eemail, Etelephone=Etelephone, Erelationship=Erelationship)
+        db.session.add(newContact)
+        db.session.commit()
+        return jsonify({'message' :'Contact created successfully!'})
+
+
+
 
 
 @app.route('/api/profile',methods=['GET','POST'])
@@ -416,6 +546,7 @@ def education():
 
 
 @app.route('/api/create_admin',methods=['POST'])
+@login_required
 def create_admin():
     data = request.get_json()
     email=data.get('email')
