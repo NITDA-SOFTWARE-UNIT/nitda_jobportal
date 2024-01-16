@@ -210,12 +210,12 @@ class Documents(UserMixin, db.Model):
 
 
 
-class coverletter(UserMixin, db.Model):
+class Coverletter(UserMixin, db.Model):
     __tablename__ = 'coverletter'
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     CoverLetter = db.Column(db.String(100), nullable=False)
-    Cletter = db.Column(db.String(100), nullable=False)
+    CLetter = db.Column(db.String(100), nullable=False)
 
 
 #with app.app_context():
@@ -232,6 +232,9 @@ class coverletter(UserMixin, db.Model):
 
     def get_id(self):
         return self.id   
+    
+
+    
 
 class Education(UserMixin, db.Model):
     __tablename__ = 'education'
@@ -244,7 +247,8 @@ class Education(UserMixin, db.Model):
     Country = db.Column(db.String(100), nullable=False)
     ClassOfDegree = db.Column(db.String(100), nullable=False)
     AwardIssueDate = db.Column(db.String(100), nullable=False)
-    QualificationDoc = db.Column(db.String(100), nullable=False)
+    Transcript = db.Column(db.String(100), nullable=False)
+    Certificate =db.Column(db.String(100), nullable=False)
 
 
 #with app.app_context():
@@ -588,33 +592,98 @@ def profile():
 def education():
     if(request.method=='POST'):
         data = request.form
-        LevelOfEdu=data.get('FirstName')
-        UniversityName=data.get('MiddleName')
-        ProgramOfStudy=data.get('FamilyName')
-        AwardedDegree=data.get('PreviousFamilyName')
-        Country=data.get('Gender')
-        ClassOfDegree=data.get('NIN')
-        AwardIssueDate=data.get('DOB')
-        QualificationDoc=data.get('POB')
+        LevelOfEdu=data.get('LevelOfEdu')
+        UniversityName=data.get('UniversityName')
+        ProgramOfStudy=data.get('ProgramOfStudy')
+        AwardedDegree=data.get('AwardedDegree')
+        Country=data.get('Country')
+        ClassOfDegree=data.get('ClassOfDegree')
+        AwardIssueDate=data.get('AwardIssueDate')
+        Transcript = request.files.get('Transcript')
+        Certificate = request.files.get('Certificate')
 
-        user=User.query.filter_by(id=current_user.id).first()
-        user_id=current_user.id
+    # Save uploaded files
+        transcript_path = save_file(Transcript)
+        certificate_path = save_file(Certificate)
 
-        # Handle file upload
-        if 'Photos' in request.files:
-            Photos = request.files['Photos']
-            photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username}"
-            Photos.save(photo_path)
-        else:
-            photo_path = None
+    new_education= Education(user_id=current_user.id,LevelOfEdu=LevelOfEdu,UniversityName=UniversityName,ProgramOfStudy=ProgramOfStudy,
+                         AwardedDegree=AwardedDegree,Country=Country,
+                         ClassOfDegree=ClassOfDegree,AwardIssueDate=AwardIssueDate,Transcript=transcript_path,Certificate=certificate_path)
 
-    new_profile= Profile(user_id=user_id,FirstName=FirstName,MiddleName=MiddleName,FamilyName=FamilyName,
-                         PreviousFamilyName=PreviousFamilyName,Gender=Gender,
-                         NIN=NIN,DOB=DOB,POB=POB,StateOfOrigin=StateOfOrigin,LGA=LGA,Photos=photo_path)
-
-    db.session.add(new_profile)
+    db.session.add(new_education)
     db.session.commit()
-    return jsonify({'message' :'Profile saved successfully'})
+    return jsonify({'message' :'Education saved successfully'})
+
+
+def save_file(file):
+    if file:
+        
+        user=User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/mukth/nitda_jobportal/documents/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
+
+
+
+
+@app.route('/api/coverletter',methods=['GET','POST'])
+@login_required
+def coverletter():
+    if(request.method=='POST'):
+        data = request.form
+        CoverLetter=data.get('CoverLetter')
+        CLetter=request.files.get('CLetter')
+
+
+    # Save uploaded files
+        cletter_path = save_file(CLetter)
+
+    new_cletter= Coverletter(user_id=current_user.id,CoverLetter=CoverLetter,CLetter=cletter_path)
+
+    db.session.add(new_cletter)
+    db.session.commit()
+    return jsonify({'message' :'Cover Letter saved successfully'})
+
+
+def save_file(file):
+    if file:
+        
+        user=User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/mukth/nitda_jobportal/coverletter/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
+
+
+
+
+@app.route('/api/documents',methods=['GET','POST'])
+@login_required
+def documents():
+    if(request.method=='POST'):
+        data = request.form
+        CV=request.files.get('CV')
+
+
+    # Save uploaded files
+        cv_path = save_file(CV)
+
+    new_cv= Documents(user_id=current_user.id,CV=cv_path)
+
+    db.session.add(new_cv)
+    db.session.commit()
+    return jsonify({'message' :'CV  saved successfully'})
+
+
+def save_file(file):
+    if file:
+        
+        user=User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/mukth/nitda_jobportal/cv/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
 
 
 
