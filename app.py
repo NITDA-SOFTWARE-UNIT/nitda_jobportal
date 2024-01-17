@@ -553,72 +553,134 @@ def reference():
 @app.route('/api/profile',methods=['GET','POST'])
 @login_required
 def profile():
-    if(request.method=='POST'):
+    if request.method == 'POST':
         data = request.form
-        FirstName=data.get('FirstName')
-        MiddleName=data.get('MiddleName')
-        FamilyName=data.get('FamilyName')
-        PreviousFamilyName=data.get('PreviousFamilyName')
-        Gender=data.get('Gender')
-        NIN=data.get('NIN')
-        DOB=data.get('DOB')
-        POB=data.get('POB')
-        StateOfOrigin=data.get('StateOfOrigin')
-        LGA=data.get('LGA')
-        Photos=data.get('Photos')
+        user_id = current_user.id
+
+        # Check if the user already has a profile
+        existing_profile = Profile.query.filter_by(user_id=user_id).first()
         user=User.query.filter_by(id=current_user.id).first()
-        user_id=current_user.id
 
-        # Handle file upload
-        if 'Photos' in request.files:
-            Photos = request.files['Photos']
-            photo_path = f"C:/Users/Maryam Ibrahim Magam/nitda_jobportal/profile_photo/{user.username+Photos.filename}"
-            Photos.save(photo_path)
+        if existing_profile:
+            # If the profile exists, update the fields
+            existing_profile.FirstName = data.get('FirstName', existing_profile.FirstName)
+            existing_profile.MiddleName = data.get('MiddleName', existing_profile.MiddleName)
+            existing_profile.FamilyName = data.get('FamilyName', existing_profile.FamilyName)
+            existing_profile.PreviousFamilyName = data.get('PreviousFamilyName', existing_profile.PreviousFamilyName)
+            existing_profile.Gender = data.get('Gender', existing_profile.Gender)
+            existing_profile.NIN = data.get('NIN', existing_profile.NIN)
+            existing_profile.DOB = data.get('DOB', existing_profile.DOB)
+            existing_profile.POB = data.get('POB', existing_profile.POB)
+            existing_profile.StateOfOrigin = data.get('StateOfOrigin', existing_profile.StateOfOrigin)
+            existing_profile.LGA = data.get('LGA', existing_profile.LGA)
+
+            # Handle file upload
+            
+            if 'Photos' in request.files:
+                Photos = request.files['Photos']
+                photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username + Photos.filename}"
+                Photos.save(photo_path)
+                existing_profile.Photos = photo_path
+
+            db.session.commit()
+            return jsonify({'message': 'Profile updated successfully'})
+
         else:
-            photo_path = None
-    new_profile= Profile(user_id=user_id,FirstName=FirstName,MiddleName=MiddleName,FamilyName=FamilyName,
-                         PreviousFamilyName=PreviousFamilyName,Gender=Gender,
-                         NIN=NIN,DOB=DOB,POB=POB,StateOfOrigin=StateOfOrigin,LGA=LGA,Photos=photo_path)
+            # If no existing profile, create a new one
+            new_profile = Profile(
+                user_id=user_id,
+                FirstName=data.get('FirstName'),
+                MiddleName=data.get('MiddleName'),
+                FamilyName=data.get('FamilyName'),
+                PreviousFamilyName=data.get('PreviousFamilyName'),
+                Gender=data.get('Gender'),
+                NIN=data.get('NIN'),
+                DOB=data.get('DOB'),
+                POB=data.get('POB'),
+                StateOfOrigin=data.get('StateOfOrigin'),
+                LGA=data.get('LGA'),
+            )
 
-    db.session.add(new_profile)
-    db.session.commit()
-    return jsonify({'message' :'Profile saved successfully'})
+            # Handle file upload
+            if 'Photos' in request.files:
+                Photos = request.files['Photos']
+                photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username + Photos.filename}"
+                Photos.save(photo_path)
+                new_profile.Photos = photo_path
+
+            db.session.add(new_profile)
+            db.session.commit()
+            return jsonify({'message': 'Profile saved successfully'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
 
 
-@app.route('/api/education',methods=['GET','POST'])
+
+@app.route('/api/education', methods=['GET', 'POST'])
 @login_required
 def education():
-    if(request.method=='POST'):
+    if request.method == 'POST':
         data = request.form
-        LevelOfEdu=data.get('LevelOfEdu')
-        UniversityName=data.get('UniversityName')
-        ProgramOfStudy=data.get('ProgramOfStudy')
-        AwardedDegree=data.get('AwardedDegree')
-        Country=data.get('Country')
-        ClassOfDegree=data.get('ClassOfDegree')
-        AwardIssueDate=data.get('AwardIssueDate')
+        user_id = current_user.id
+
+        # Check if the user already has an education entry
+        existing_education = Education.query.filter_by(user_id=user_id).first()
+
+        LevelOfEdu = data.get('LevelOfEdu')
+        UniversityName = data.get('UniversityName')
+        ProgramOfStudy = data.get('ProgramOfStudy')
+        AwardedDegree = data.get('AwardedDegree')
+        Country = data.get('Country')
+        ClassOfDegree = data.get('ClassOfDegree')
+        AwardIssueDate = data.get('AwardIssueDate')
         Transcript = request.files.get('Transcript')
         Certificate = request.files.get('Certificate')
 
-    # Save uploaded files
+        # Save uploaded files
         transcript_path = save_file(Transcript)
         certificate_path = save_file(Certificate)
 
-    new_education= Education(user_id=current_user.id,LevelOfEdu=LevelOfEdu,UniversityName=UniversityName,ProgramOfStudy=ProgramOfStudy,
-                         AwardedDegree=AwardedDegree,Country=Country,
-                         ClassOfDegree=ClassOfDegree,AwardIssueDate=AwardIssueDate,Transcript=transcript_path,Certificate=certificate_path)
+        if existing_education:
+            # If education entry exists, update the fields
+            existing_education.LevelOfEdu = LevelOfEdu
+            existing_education.UniversityName = UniversityName
+            existing_education.ProgramOfStudy = ProgramOfStudy
+            existing_education.AwardedDegree = AwardedDegree
+            existing_education.Country = Country
+            existing_education.ClassOfDegree = ClassOfDegree
+            existing_education.AwardIssueDate = AwardIssueDate
+            existing_education.Transcript = transcript_path
+            existing_education.Certificate = certificate_path
 
-    db.session.add(new_education)
-    db.session.commit()
-    return jsonify({'message' :'Education saved successfully'})
+            db.session.commit()
+            return jsonify({'message': 'Education entry updated successfully'})
+        else:
+            # If no education entry exists, create a new one
+            new_education = Education(
+                user_id=user_id,
+                LevelOfEdu=LevelOfEdu,
+                UniversityName=UniversityName,
+                ProgramOfStudy=ProgramOfStudy,
+                AwardedDegree=AwardedDegree,
+                Country=Country,
+                ClassOfDegree=ClassOfDegree,
+                AwardIssueDate=AwardIssueDate,
+                Transcript=transcript_path,
+                Certificate=certificate_path
+            )
+
+            db.session.add(new_education)
+            db.session.commit()
+            return jsonify({'message': 'Education entry saved successfully'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
 def save_file(file):
     if file:
-        
-        user=User.query.filter_by(id=current_user.id).first()
+        user = User.query.filter_by(id=current_user.id).first()
         file_path = f"C:/Users/mukth/nitda_jobportal/documents/{user.username+file.filename}"
         file.save(file_path)
         return file_path
@@ -627,29 +689,47 @@ def save_file(file):
 
 
 
-@app.route('/api/coverletter',methods=['GET','POST'])
+@app.route('/api/coverletter', methods=['GET', 'POST'])
 @login_required
 def coverletter():
-    if(request.method=='POST'):
+    if request.method == 'POST':
         data = request.form
-        CoverLetter=data.get('CoverLetter')
-        CLetter=request.files.get('CLetter')
+        user_id = current_user.id
 
+        # Check if the user already has a cover letter entry
+        existing_cletter = Coverletter.query.filter_by(user_id=user_id).first()
 
-    # Save uploaded files
+        CoverLetter = data.get('CoverLetter')
+        CLetter = request.files.get('CLetter')
+
+        # Save uploaded file
         cletter_path = save_file(CLetter)
 
-    new_cletter= Coverletter(user_id=current_user.id,CoverLetter=CoverLetter,CLetter=cletter_path)
+        if existing_cletter:
+            # If cover letter entry exists, update the fields
+            existing_cletter.CoverLetter = CoverLetter
+            existing_cletter.CLetter = cletter_path
 
-    db.session.add(new_cletter)
-    db.session.commit()
-    return jsonify({'message' :'Cover Letter saved successfully'})
+            db.session.commit()
+            return jsonify({'message': 'Cover Letter entry updated successfully'})
+        else:
+            # If no cover letter entry exists, create a new one
+            new_cletter = CoverLetter(
+                user_id=user_id,
+                CoverLetter=CoverLetter,
+                CLetter=cletter_path
+            )
+
+            db.session.add(new_cletter)
+            db.session.commit()
+            return jsonify({'message': 'Cover Letter entry saved successfully'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
 def save_file(file):
     if file:
-        
-        user=User.query.filter_by(id=current_user.id).first()
+        user = User.query.filter_by(id=current_user.id).first()
         file_path = f"C:/Users/mukth/nitda_jobportal/coverletter/{user.username+file.filename}"
         file.save(file_path)
         return file_path
@@ -658,28 +738,46 @@ def save_file(file):
 
 
 
-@app.route('/api/documents',methods=['GET','POST'])
+
+
+@app.route('/api/documents', methods=['GET', 'POST'])
 @login_required
 def documents():
-    if(request.method=='POST'):
+    if request.method == 'POST':
         data = request.form
-        CV=request.files.get('CV')
+        user_id = current_user.id
 
+        # Check if the user already has a document entry
+        existing_document = Documents.query.filter_by(user_id=user_id).first()
 
-    # Save uploaded files
+        CV = request.files.get('CV')
+
+        # Save uploaded file
         cv_path = save_file(CV)
 
-    new_cv= Documents(user_id=current_user.id,CV=cv_path)
+        if existing_document:
+            # If document entry exists, update the fields
+            existing_document.CV = cv_path
 
-    db.session.add(new_cv)
-    db.session.commit()
-    return jsonify({'message' :'CV  saved successfully'})
+            db.session.commit()
+            return jsonify({'message': 'CV entry updated successfully'})
+        else:
+            # If no document entry exists, create a new one
+            new_cv = Documents(
+                user_id=user_id,
+                CV=cv_path
+            )
+
+            db.session.add(new_cv)
+            db.session.commit()
+            return jsonify({'message': 'CV entry saved successfully'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
 def save_file(file):
     if file:
-        
-        user=User.query.filter_by(id=current_user.id).first()
+        user = User.query.filter_by(id=current_user.id).first()
         file_path = f"C:/Users/mukth/nitda_jobportal/cv/{user.username+file.filename}"
         file.save(file_path)
         return file_path
