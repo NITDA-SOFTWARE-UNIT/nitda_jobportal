@@ -470,68 +470,163 @@ def save_reference(file):
     return None
 
 
-@app.route('/api/contact', methods=['GET', 'POST'])
+@app.route('/api/contact', methods=['POST'])
 @login_required
 def contact():
-    if (request.method == 'POST'):
-        address = request.json.get('address')
-        city = request.json.get('city')
-        PostalCode = request.json.get('PostalCode')
-        TelephoneNo = request.json.get('TelephoneNo')
-        Ename = request.json.get('Ename')
-        Eemail = request.json.get('Eemail')
-        Etelephone = request.json.get('Etelephone')
-        Erelationship =  request.json.get('Erelationship')
-        newContact = Contact(user_id=current_user.id, email=current_user.email, address=address, city=city, PostalCode=PostalCode,
-                        TelephoneNo=TelephoneNo, Ename=Ename, Eemail=Eemail, Etelephone=Etelephone, Erelationship=Erelationship)
-        db.session.add(newContact)
-        db.session.commit()
-        return jsonify({'message' :'Contact created successfully!'})
+    if request.method == 'POST':
+        data = request.json
 
-@app.route('/api/work_experience', methods=['GET', 'POST'])
+        # Extracting data from the JSON request with default values if keys are not present
+        address = data.get('address', '')
+        city = data.get('city', '')
+        PostalCode = data.get('PostalCode', '')
+        TelephoneNo = data.get('TelephoneNo', '')
+        Ename = data.get('Ename', '')
+        Eemail = data.get('Eemail', '')
+        Etelephone = data.get('Etelephone', '')
+        Erelationship = data.get('Erelationship', '')
+
+        # Retrieving the current user
+        user = User.query.get(current_user.id)
+        if user:
+            # Check for existing contact with the same email
+            existing_contact = Contact.query.filter_by(user_id=user.id).first()
+
+            if existing_contact:
+                # If contact with the same email exists, update the existing contact
+                existing_contact.address = address
+                existing_contact.city = city
+                existing_contact.PostalCode = PostalCode
+                existing_contact.TelephoneNo = TelephoneNo
+                existing_contact.Ename = Ename
+                existing_contact.Eemail=Eemail
+                existing_contact.Etelephone = Etelephone
+                existing_contact.Erelationship = Erelationship
+
+                db.session.commit()
+                return jsonify({'message': 'Contact updated successfully!'})
+            else:
+                # If no existing contact, create a new contact
+                new_contact = Contact(
+                    user_id=user.id,
+                    email=user.email,
+                    address=address,
+                    city=city,
+                    PostalCode=PostalCode,
+                    TelephoneNo=TelephoneNo,
+                    Ename=Ename,
+                    Eemail=Eemail,
+                    Etelephone=Etelephone,
+                    Erelationship=Erelationship
+                )
+
+                db.session.add(new_contact)
+                db.session.commit()
+                return jsonify({'message': 'Contact created successfully!'})
+
+    return jsonify({'message': 'Invalid request'})
+
+@app.route('/api/work_experience', methods=['POST'])
 @login_required
 def work_experience():
-    if (request.method == 'POST'):
-        CompanyName = request.json.get('CompanyName')
-        Sector = request.json.get('Sector')
-        Occupation = request.json.get('Occupation')
-        FromDate = request.json.get('FromDate')
-        ToDate = request.json.get('ToDate')
-        CurrentlyEmployed = request.form.get('CurrentlyEmployed')
-        ReasonForLeaving = request.json.get('ReasonForLeaving')
-        if CurrentlyEmployed == True :
-            CurrentlyEmployed = True
-        else: 
-            CurrentlyEmployed = False
-        newWorkExperience = WorkExperience(user_id=current_user.id, CompanyName=CompanyName, Sector=Sector, Occupation=Occupation, FromDate=FromDate,
-                        ToDate=ToDate, CurrentlyEmployed=CurrentlyEmployed, ReasonForLeaving=ReasonForLeaving)
-        db.session.add(newWorkExperience)
-        db.session.commit()
-        return jsonify({'message' :'Work Experience created successfully!'})
+    if request.method == 'POST':
+        data = request.json
+
+        # Extracting data from the JSON request with default values if keys are not present
+        CompanyName = data.get('CompanyName', '')
+        Sector = data.get('Sector', '')
+        Occupation = data.get('Occupation', '')
+        FromDate = data.get('FromDate', '')
+        ToDate = data.get('ToDate', '')
+        CurrentlyEmployed = data.get('CurrentlyEmployed', False)
+        ReasonForLeaving = data.get('ReasonForLeaving', '')
+
+        # Retrieving the current user
+        user_id = current_user.id
+
+        # Check for existing work experience with the same CompanyName and Occupation
+        existing_work_experience = WorkExperience.query.filter_by(
+            user_id=user_id,
+            #CompanyName=CompanyName,
+            #Occupation=Occupation
+        ).first()
+
+        if existing_work_experience:
+            # If work experience with the same CompanyName and Occupation exists, update the existing entry
+            existing_work_experience.CompanyName = CompanyName
+            existing_work_experience.Occupation = Occupation
+            existing_work_experience.Sector = Sector
+            existing_work_experience.FromDate = FromDate
+            existing_work_experience.ToDate = ToDate
+            existing_work_experience.CurrentlyEmployed = CurrentlyEmployed
+            existing_work_experience.ReasonForLeaving = ReasonForLeaving
+
+            db.session.commit()
+            return jsonify({'message': 'Work Experience updated successfully!'})
+        else:
+            # If no existing work experience, create a new entry
+            new_work_experience = WorkExperience(
+                user_id=user_id,
+                CompanyName=CompanyName,
+                Sector=Sector,
+                Occupation=Occupation,
+                FromDate=FromDate,
+                ToDate=ToDate,
+                CurrentlyEmployed=CurrentlyEmployed,
+                ReasonForLeaving=ReasonForLeaving
+            )
+
+            db.session.add(new_work_experience)
+            db.session.commit()
+            return jsonify({'message': 'Work Experience created successfully!'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
-@app.route('/api/publication', methods=['GET', 'POST'])
+
+@app.route('/api/publication', methods=['POST'])
 @login_required
 def publication():
-    if(request.method=='POST'):
+    if request.method == 'POST':
         data = request.form
-        NameOfPublication=data.get('NameOfPublication')
-        ProofOfPublication=request.files.get('ProofOfPublication')
-        user=User.query.filter_by(id=current_user.id).first()
+        NameOfPublication = data.get('NameOfPublication')
+        ProofOfPublication = request.files.get('ProofOfPublication')
+
+        # Retrieve the current user
+        user = User.query.filter_by(id=current_user.id).first()
+
         # Handle file upload
         publication_path = save_publication(ProofOfPublication)
 
-    newPublication= Publication(user_id=current_user.id,NameOfPublication=NameOfPublication,
-                         ProofOfPublication=publication_path)
+        # Check for an existing publication with the same NameOfPublication
+        existing_publication = Publication.query.filter_by(
+            user_id=user.id,
+            NameOfPublication=NameOfPublication
+        ).first()
 
-    db.session.add(newPublication)
-    db.session.commit()
-    return jsonify({'message' :'Publication created successfully!'})
+        if existing_publication:
+            # If publication with the same NameOfPublication exists, update the existing entry
+            existing_publication.ProofOfPublication = publication_path
+            db.session.commit()
+            return jsonify({'message': 'Publication updated successfully!'})
+        else:
+            # If no existing publication, create a new entry
+            new_publication = Publication(
+                user_id=user.id,
+                NameOfPublication=NameOfPublication,
+                ProofOfPublication=publication_path
+            )
 
-@app.route('/api/reference', methods=['GET', 'POST'])
+            db.session.add(new_publication)
+            db.session.commit()
+            return jsonify({'message': 'Publication created successfully!'})
+
+    return jsonify({'message': 'Invalid request'})
+
+@app.route('/api/reference', methods=['POST'])
 @login_required
 def reference():
-    if (request.method == 'POST'):
+    if request.method == 'POST':
         data = request.form
         Rname = data.get('Rname')
         Designation = data.get('Designation')
@@ -540,13 +635,50 @@ def reference():
         Organization = data.get('Organization')
         Email = data.get('Email')
         Address = data.get('Address')
-        ReferenceLetter =  request.files.get('ReferenceLetter')
+        ReferenceLetter = request.files.get('ReferenceLetter')
+
+        # Retrieve the current user
+        user = User.query.filter_by(id=current_user.id).first()
+
+        # Handle file upload
         reference_path = save_reference(ReferenceLetter)
-        newReference = Reference(user_id=current_user.id, Rname=Rname, Designation=Designation, Telephone=Telephone, Relationship=Relationship,
-                        Organization=Organization, Email=Email, Address=Address, ReferenceLetter=reference_path)
-        db.session.add(newReference)
-        db.session.commit()
-        return jsonify({'message' :'Reference created successfully!'})
+
+        # Check for an existing reference with the same Rname and Email
+        existing_reference = Reference.query.filter_by(
+            user_id=user.id,
+            Rname=Rname,
+            Email=Email
+        ).first()
+
+        if existing_reference:
+            # If reference with the same Rname and Email exists, update the existing entry
+            existing_reference.Designation = Designation
+            existing_reference.Telephone = Telephone
+            existing_reference.Relationship = Relationship
+            existing_reference.Organization = Organization
+            existing_reference.Address = Address
+            existing_reference.ReferenceLetter = reference_path
+            db.session.commit()
+            return jsonify({'message': 'Reference updated successfully!'})
+        else:
+            # If no existing reference, create a new entry
+            new_reference = Reference(
+                user_id=user.id,
+                Rname=Rname,
+                Designation=Designation,
+                Telephone=Telephone,
+                Relationship=Relationship,
+                Organization=Organization,
+                Email=Email,
+                Address=Address,
+                ReferenceLetter=reference_path
+            )
+
+            db.session.add(new_reference)
+            db.session.commit()
+            return jsonify({'message': 'Reference created successfully!'})
+
+    return jsonify({'message': 'Invalid request'})
 
 
 
