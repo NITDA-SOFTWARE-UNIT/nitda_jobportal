@@ -469,6 +469,24 @@ def save_reference(file):
         return file_path
     return None
 
+
+
+@app.route('/api/change_role',methods=['POST'])
+@login_required
+def change_role():
+    user_id = current_user.id
+    data = request.form
+    newrole_name=data.get('role_id')
+    application = Application.query.filter_by(user_id = user_id).first()
+
+    if application:
+        application.role_id=newrole_name
+        db.session.commit()
+        return jsonify({'message' :'Changed successfully!'})
+    else:
+        return jsonify({'message' :'Couldnt change'})
+
+
 @app.route('/api/submit/<int:id>', methods=['GET'])
 @login_required
 def submit(id):
@@ -486,7 +504,7 @@ def submit(id):
 
     if application:
         # If application exists
-        if (profile_exists and education_exists and coverletter_exists and documents_exists and contact_exists and publication_exists ) or workexperience_exists:
+        if (profile_exists and education_exists and coverletter_exists  and contact_exists and publication_exists ) or workexperience_exists:
             application.app_status = True
             db.session.commit()
             return jsonify({'message' : 'Application completed'})
