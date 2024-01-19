@@ -60,9 +60,6 @@ class Contact(UserMixin, db.Model):
     Etelephone = db.Column(db.String(100), nullable=False)
     Erelationship = db.Column(db.String(100), nullable=False)
 
-#with app.app_context():
-#    db.create_all()
-
     def is_active(self):
         return True
 
@@ -79,16 +76,13 @@ class WorkExperience(UserMixin, db.Model):
     __tablename__ = 'workexperience'
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    CompanyName = db.Column(db.String(100), nullable=False)
-    Sector = db.Column(db.String(100), nullable=False)
-    Occupation = db.Column(db.String(100), nullable=False)
-    FromDate = db.Column(db.String(100), nullable=False)
-    ToDate = db.Column(db.String(100), nullable=False)
-    CurrentlyEmployed = db.Column(db.Boolean, nullable=False, default=False)
-    ReasonForLeaving = db.Column(db.String(500), nullable=False)
-
-#with app.app_context():
-#    db.create_all()
+    CompanyName = db.Column(db.String(100), nullable=True)
+    Sector = db.Column(db.String(100), nullable=True)
+    Occupation = db.Column(db.String(100), nullable=True)
+    FromDate = db.Column(db.String(100), nullable=True)
+    ToDate = db.Column(db.String(100), nullable=True)
+    CurrentlyEmployed = db.Column(db.Boolean, nullable=False, default=True)
+    ReasonForLeaving = db.Column(db.String(500), nullable=True)
 
     def is_active(self):
         return True
@@ -107,11 +101,8 @@ class Publication(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     NameOfPublication = db.Column(db.String(100), nullable=False)
-    ProofOfPublication = db.Column(db.String(500), nullable=False)
-
-
-#with app.app_context():
-#    db.create_all()
+    DateOfPublication = db.Column(db.String(100), nullable=False)
+    LinkOfPublication = db.Column(db.String(100), nullable=False)
 
     def is_active(self):
         return True
@@ -138,10 +129,6 @@ class Reference(UserMixin, db.Model):
     Address = db.Column(db.String(100), nullable=False)
     ReferenceLetter = db.Column(db.String(200), nullable=False)
 
-
-#with app.app_context():
-#    db.create_all()
-
     def is_active(self):
         return True
 
@@ -153,7 +140,6 @@ class Reference(UserMixin, db.Model):
 
     def get_id(self):
         return self.id
-
 
 
 class Verification(UserMixin, db.Model):
@@ -168,10 +154,6 @@ class Verification(UserMixin, db.Model):
     ClassOfDegree = db.Column(db.String(100), nullable=False)
     AwardIssueDate = db.Column(db.String(100), nullable=False)
     QualificationDoc = db.Column(db.String(100), nullable=False)
-
-
-#with app.app_context():
-#    db.create_all()
 
     def is_active(self):
         return True
@@ -192,10 +174,6 @@ class Documents(UserMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     CV = db.Column(db.String(100), nullable=False)
 
-
-#with app.app_context():
-#    db.create_all()
-
     def is_active(self):
         return True
 
@@ -207,8 +185,6 @@ class Documents(UserMixin, db.Model):
 
     def get_id(self):
         return self.id   
-
-
 
 class Coverletter(UserMixin, db.Model):
     __tablename__ = 'coverletter'
@@ -217,10 +193,6 @@ class Coverletter(UserMixin, db.Model):
     CoverLetter = db.Column(db.String(100), nullable=False)
     CLetter = db.Column(db.String(100), nullable=False)
 
-
-#with app.app_context():
-#    db.create_all()
-
     def is_active(self):
         return True
 
@@ -233,9 +205,6 @@ class Coverletter(UserMixin, db.Model):
     def get_id(self):
         return self.id   
     
-
-    
-
 class Education(UserMixin, db.Model):
     __tablename__ = 'education'
     id = db.Column(db.Integer, primary_key = True)
@@ -249,10 +218,6 @@ class Education(UserMixin, db.Model):
     AwardIssueDate = db.Column(db.String(100), nullable=False)
     Transcript = db.Column(db.String(100), nullable=False)
     Certificate =db.Column(db.String(100), nullable=False)
-
-
-#with app.app_context():
-#    db.create_all()
 
     def is_active(self):
         return True
@@ -282,9 +247,6 @@ class Profile(UserMixin, db.Model):
     LGA = db.Column(db.String(100), nullable=False)
     Photos = db.Column(db.String(200), nullable=False)
 
-#with app.app_context():
-#    db.create_all()
-
     def is_active(self):
         return True
 
@@ -297,6 +259,24 @@ class Profile(UserMixin, db.Model):
     def get_id(self):
         return self.id        
 
+class JobOpening(UserMixin, db.Model):
+    __tablename__ = 'jobopening'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    is_open = db.Column(db.Boolean, default=False)
+
+    def is_active(self):
+        return True
+
+    def is_authenticated(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key = True)
@@ -305,10 +285,6 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), nullable=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
-    #applications = db.relationship('Application', backref='user')
-
-#with app.app_context():
-#    db.create_all()
 
     def is_active(self):
         return True
@@ -349,9 +325,7 @@ class Application(UserMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('jobroles.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     app_status = db.Column(db.Boolean, nullable=False, default=False)
-
-#with app.app_context():
-#    db.create_all()
+    job_opening = db.Column(db.String(100), nullable=False)
 
     def is_active(self):
         return True
@@ -397,9 +371,6 @@ class Role(UserMixin, db.Model):
     role_name = db.Column(db.String(100),nullable=False)
     role_status =  db.Column(db.Boolean, nullable=False, default=False)
 
-#with app.app_context():
- #   db.create_all()
-
     def is_active(self):
         return True
 
@@ -434,8 +405,6 @@ class Role(UserMixin, db.Model):
         return User.query.get(data['id'])
 
 
-
-
 @auth.verify_password
 def verify_password(username,password):
 
@@ -449,9 +418,22 @@ def verify_password(username,password):
     return True
 
 def generate_registration_code():
-    timestamp = str(int(time.time()))
+    current_year = datetime.now().year
+    x = datetime.now()
+    month = x.strftime("%m")
+    year = x.strftime("%y")
+    #timestamp = str(int(time.time()))
     random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return f"NITDA-{timestamp}-{random_chars}"
+    return f"N-{month}-{year}-{random_chars}"
+
+def save_file(file):
+    if file:
+        user = User.query.filter_by(id=current_user.id).first()
+        file_path = f"C:/Users/Maryam Ibrahim Magam/nitda_jobportal/documents/{user.username+file.filename}"
+        file.save(file_path)
+        return file_path
+    return None
+
 
 def save_publication(file):
     if file:
@@ -470,12 +452,17 @@ def save_reference(file):
     return None
 
 
-@app.route('/api/contact', methods=['POST'])
+
+
+@app.route('/api/contact', methods=['GET', 'POST'])
 @login_required
 def contact():
+    if request.method == 'GET':
+        contact_result = Contact.query.filter_by(user_id=current_user.id).all()
+        data = [{'email': contact.email, 'address': contact.address, 'city': contact.city, 'PostalCode': contact.PostalCode, 'TelephoneNo': contact.TelephoneNo, 'Ename': contact.Ename, 'Eemail': contact.Eemail, 'Etelephone': contact.Etelephone, 'Erelationship': contact.Erelationship} for contact in contact_result]
+        return jsonify(data)
     if request.method == 'POST':
-        data = request.json
-
+        data = request.form
         # Extracting data from the JSON request with default values if keys are not present
         address = data.get('address', '')
         city = data.get('city', '')
@@ -485,7 +472,6 @@ def contact():
         Eemail = data.get('Eemail', '')
         Etelephone = data.get('Etelephone', '')
         Erelationship = data.get('Erelationship', '')
-
         # Retrieving the current user
         user = User.query.get(current_user.id)
         if user:
@@ -526,12 +512,15 @@ def contact():
 
     return jsonify({'message': 'Invalid request'})
 
-@app.route('/api/work_experience', methods=['POST'])
+@app.route('/api/work_experience', methods=['GET', 'POST'])
 @login_required
 def work_experience():
+    if request.method == 'GET':
+        workexperience_result = WorkExperience.query.filter_by(user_id=current_user.id).all()
+        data = [{'CompanyName': workexperience.CompanyName, 'Sector': workexperience.Sector, 'Occupation': workexperience.Occupation, 'FromDate': workexperience.FromDate, 'ToDate': workexperience.ToDate, 'CurrentlyEmployed': workexperience.CurrentlyEmployed, 'ReasonForLeaving': workexperience.ReasonForLeaving} for workexperience in workexperience_result]
+        return jsonify(data)
     if request.method == 'POST':
-        data = request.json
-
+        data = request.form
         # Extracting data from the JSON request with default values if keys are not present
         CompanyName = data.get('CompanyName', '')
         Sector = data.get('Sector', '')
@@ -540,20 +529,18 @@ def work_experience():
         ToDate = data.get('ToDate', '')
         CurrentlyEmployed = data.get('CurrentlyEmployed', False)
         ReasonForLeaving = data.get('ReasonForLeaving', '')
-
         # Retrieving the current user
         user_id = current_user.id
-
         # Check for existing work experience with the same CompanyName and Occupation
         existing_work_experience = WorkExperience.query.filter_by(
             user_id=user_id,
-            #CompanyName=CompanyName,
+            CompanyName=CompanyName,
             #Occupation=Occupation
         ).first()
 
         if existing_work_experience:
             # If work experience with the same CompanyName and Occupation exists, update the existing entry
-            existing_work_experience.CompanyName = CompanyName
+            #existing_work_experience.CompanyName = CompanyName
             existing_work_experience.Occupation = Occupation
             existing_work_experience.Sector = Sector
             existing_work_experience.FromDate = FromDate
@@ -583,20 +570,24 @@ def work_experience():
     return jsonify({'message': 'Invalid request'})
 
 
-
-@app.route('/api/publication', methods=['POST'])
+@app.route('/api/publication', methods=['GET', 'POST'])
 @login_required
 def publication():
+    if request.method == 'GET':
+        publication_result = Publication.query.filter_by(user_id=current_user.id).all()
+        data = [{'NameOfPublication': publication.NameOfPublication, 'DateOfPublication': publication.DateOfPublication, 'LinkOfPublication': publication.LinkOfPublication} for publication in publication_result]
+        return jsonify(data)
     if request.method == 'POST':
         data = request.form
         NameOfPublication = data.get('NameOfPublication')
-        ProofOfPublication = request.files.get('ProofOfPublication')
+        DateOfPublication = data.get('DateOfPublication')
+        LinkOfPublication = data.get('LinkOfPublication')
 
         # Retrieve the current user
         user = User.query.filter_by(id=current_user.id).first()
 
         # Handle file upload
-        publication_path = save_publication(ProofOfPublication)
+        #publication_path = save_publication(ProofOfPublication)
 
         # Check for an existing publication with the same NameOfPublication
         existing_publication = Publication.query.filter_by(
@@ -606,7 +597,8 @@ def publication():
 
         if existing_publication:
             # If publication with the same NameOfPublication exists, update the existing entry
-            existing_publication.ProofOfPublication = publication_path
+            existing_publication.DateOfPublication = DateOfPublication
+            existing_publication.LinkOfPublication = LinkOfPublication
             db.session.commit()
             return jsonify({'message': 'Publication updated successfully!'})
         else:
@@ -614,7 +606,8 @@ def publication():
             new_publication = Publication(
                 user_id=user.id,
                 NameOfPublication=NameOfPublication,
-                ProofOfPublication=publication_path
+                DateOfPublication=DateOfPublication,
+                LinkOfPublication=LinkOfPublication
             )
 
             db.session.add(new_publication)
@@ -623,9 +616,14 @@ def publication():
 
     return jsonify({'message': 'Invalid request'})
 
-@app.route('/api/reference', methods=['POST'])
+
+@app.route('/api/reference', methods=['GET', 'POST'])
 @login_required
 def reference():
+    if request.method == 'GET':
+        reference_result = Reference.query.filter_by(user_id=current_user.id).all()
+        data = [{'Rname': reference.Rname, 'Designation': reference.Designation, 'Telephone': reference.Telephone, 'Relationship': reference.Relationship, 'Organization': reference.Organization, 'Email': reference.Email, 'Address': reference.Address, 'ReferenceLetter': reference.ReferenceLetter} for reference in reference_result]
+        return jsonify(data)
     if request.method == 'POST':
         data = request.form
         Rname = data.get('Rname')
@@ -682,17 +680,19 @@ def reference():
 
 
 
-@app.route('/api/profile',methods=['GET','POST'])
+@app.route('/api/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    if request.method == 'GET':
+        profile_result = Profile.query.filter_by(user_id=current_user.id).all()
+        data = [{'FirstName': profile.FirstName, 'MiddleName': profile.MiddleName, 'FamilyName': profile.FamilyName, 'PreviousFamilyName': profile.PreviousFamilyName, 'Gender': profile.Gender, 'NIN': profile.NIN, 'DOB': profile.DOB, 'POB': profile.POB, 'StateOfOrigin': profile.StateOfOrigin, 'LGA': profile.LGA, 'Photos': profile.Photos} for profile in profile_result]
+        return jsonify(data)
     if request.method == 'POST':
         data = request.form
         user_id = current_user.id
-
         # Check if the user already has a profile
         existing_profile = Profile.query.filter_by(user_id=user_id).first()
         user=User.query.filter_by(id=current_user.id).first()
-
         if existing_profile:
             # If the profile exists, update the fields
             existing_profile.FirstName = data.get('FirstName', existing_profile.FirstName)
@@ -705,18 +705,14 @@ def profile():
             existing_profile.POB = data.get('POB', existing_profile.POB)
             existing_profile.StateOfOrigin = data.get('StateOfOrigin', existing_profile.StateOfOrigin)
             existing_profile.LGA = data.get('LGA', existing_profile.LGA)
-
             # Handle file upload
-            
             if 'Photos' in request.files:
                 Photos = request.files['Photos']
                 photo_path = f"C:/Users/mukth/nitda_jobportal/profile_photo/{user.username + Photos.filename}"
                 Photos.save(photo_path)
                 existing_profile.Photos = photo_path
-
             db.session.commit()
             return jsonify({'message': 'Profile updated successfully'})
-
         else:
             # If no existing profile, create a new one
             new_profile = Profile(
@@ -747,19 +743,18 @@ def profile():
     return jsonify({'message': 'Invalid request'})
 
 
-
-
-
 @app.route('/api/education', methods=['GET', 'POST'])
 @login_required
 def education():
+    if request.method == 'GET':
+        education_result = Education.query.filter_by(user_id=current_user.id).all()
+        data = [{'LevelOfEdu': education.LevelOfEdu, 'UniversityName': education.UniversityName, 'ProgramOfStudy': education.ProgramOfStudy, 'AwardedDegree': education.AwardedDegree, 'Country': education.Country, 'ClassOfDegree': education.ClassOfDegree, 'AwardIssueDate': education.AwardIssueDate, 'Transcript': education.Transcript, 'Certificate': education.Certificate} for education in education_result]
+        return jsonify(data)
     if request.method == 'POST':
         data = request.form
         user_id = current_user.id
-
         # Check if the user already has an education entry
         existing_education = Education.query.filter_by(user_id=user_id).first()
-
         LevelOfEdu = data.get('LevelOfEdu')
         UniversityName = data.get('UniversityName')
         ProgramOfStudy = data.get('ProgramOfStudy')
@@ -769,11 +764,9 @@ def education():
         AwardIssueDate = data.get('AwardIssueDate')
         Transcript = request.files.get('Transcript')
         Certificate = request.files.get('Certificate')
-
         # Save uploaded files
         transcript_path = save_file(Transcript)
         certificate_path = save_file(Certificate)
-
         if existing_education:
             # If education entry exists, update the fields
             existing_education.LevelOfEdu = LevelOfEdu
@@ -810,27 +803,19 @@ def education():
     return jsonify({'message': 'Invalid request'})
 
 
-def save_file(file):
-    if file:
-        user = User.query.filter_by(id=current_user.id).first()
-        file_path = f"C:/Users/mukth/nitda_jobportal/documents/{user.username+file.filename}"
-        file.save(file_path)
-        return file_path
-    return None
-
-
-
-
 @app.route('/api/coverletter', methods=['GET', 'POST'])
 @login_required
 def coverletter():
+    if request.method == 'GET':
+        coverletter_result = Coverletter.query.filter_by(user_id=current_user.id).all()
+        data = [{'CoverLetter': coverletter.CoverLetter} for coverletter in coverletter_result]
+        return jsonify(data)
     if request.method == 'POST':
         data = request.form
         user_id = current_user.id
 
         # Check if the user already has a cover letter entry
         existing_cletter = Coverletter.query.filter_by(user_id=user_id).first()
-
         CoverLetter = data.get('CoverLetter')
         CLetter = request.files.get('CLetter')
 
@@ -866,10 +851,6 @@ def save_file(file):
         file.save(file_path)
         return file_path
     return None
-
-
-
-
 
 
 @app.route('/api/documents', methods=['GET', 'POST'])
@@ -915,8 +896,6 @@ def save_file(file):
         return file_path
     return None
 
-
-
 @app.route('/api/create_admin',methods=['POST'])
 @login_required
 def create_admin():
@@ -955,6 +934,36 @@ def add_role():
     db.session.commit()
     return jsonify({'message' :'New Job role created successfully!'})
 
+@app.route('/api/create_jobopenings', methods=['POST'])
+@login_required
+def create_jobopening():
+    current_year = datetime.now().year
+    x = datetime.now()
+    month = x.strftime("%b")
+    title = f"JobOpening-{month}-{current_year}"
+    job = JobOpening.query.filter_by(title = title).first()
+    if JobOpening:
+        return "This Months Job Opening Already Created!"
+    else:
+        new_job_opening = JobOpening(title=title)
+    db.session.add(new_job_opening)
+    db.session.commit()
+    return jsonify({'message': 'Job opening created successfully'})
+
+@app.route('/api/job_openings/<int:job_id>/status', methods=['PUT'])
+@login_required
+def job_opening_status(job_id):
+    job_opening = JobOpening.query.get_or_404(job_id)
+    if current_user.is_authenticated and current_user.is_admin:
+        open_job = JobOpening.query.filter_by(is_open=True).first()
+        if open_job:
+            return jsonify({'message': 'Another job opening is already open. Cannot open another one.'}), 400
+        job_opening.is_open = not job_opening.is_open
+        db.session.commit()
+        return jsonify({'message': f'Job opening status updated to {"Open" if job_opening.is_open else "Closed"}'})
+    else:
+        return jsonify({'message': 'Unauthorized access'}), 403
+
 @app.route('/api/add_application',methods=['POST'])
 @login_required
 def add_application():
@@ -965,13 +974,17 @@ def add_application():
     user = current_user
     Role = Application.query.filter_by(role_id = role_id).first()
     userapplication = Application.query.filter_by(user_id = user.id).first()
+    job = JobOpening.query.filter_by(is_open=True).first()
     print(Role)
     print(userapplication)
-    if Role and userapplication :
-        return jsonify({'message' : 'You cant apply for the same role'}), 400
+    print(job.title)
+    print(userapplication.job_opening)
+    if job.title == userapplication.job_opening :
+        return jsonify({'message' : 'You cant apply again in this opening'}), 400
     #if Role.query.filter_by(role_name = role_name).first() is not None:
     #    return jsonify({'message': 'Role Exists'}), 400   
-    new_application= Application(role_id=role_id, user_id=user.id)
+    job = JobOpening.query.filter_by(is_open=True).first()
+    new_application= Application(role_id=role_id, user_id=user.id, job_opening=job.title)
     db.session.add(new_application)
     db.session.commit()
     return jsonify({'message' :'New Application created successfully!'})
@@ -1017,6 +1030,15 @@ def get_app(id):
     #apps = Application.query.join(Role,Application.role_id==Role.id)
     return jsonify({'username': 'r_name'})
 
+@app.route('/api/get_apps_status')
+@login_required
+def get_apps_status():
+    user_id = current_user.id
+    total_apps = Application.query.filter_by(user_id=user_id).count()
+    submitted_apps = Application.query.filter_by(user_id=user_id, app_status=True).count()
+    pending_apps = Application.query.filter_by(user_id=user_id, app_status=False).count()
+    
+    return jsonify({'Total Applications':total_apps, 'Submitted_apps': submitted_apps, 'pending_apps': pending_apps})
 
 
 @app.route('/get_all_users', methods=['GET'])
