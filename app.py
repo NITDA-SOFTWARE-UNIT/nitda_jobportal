@@ -191,6 +191,11 @@ class Coverletter(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     CoverLetter = db.Column(db.String(100), nullable=False)
+    CLetter = db.Column(db.String(100), nullable=True)
+
+
+#with app.app_context():
+#    db.create_all()
     CLetter = db.Column(db.String(100), nullable=False)
 
     def is_active(self):
@@ -450,6 +455,82 @@ def save_reference(file):
         file.save(file_path)
         return file_path
     return None
+
+
+
+@app.route('/api/change_role',methods=['POST'])
+@login_required
+def change_role():
+    user_id = current_user.id
+    data = request.form
+    newrole_name=data.get('role_id')
+    application = Application.query.filter_by(user_id = user_id).first()
+
+    if application:
+        application.role_id=newrole_name
+        db.session.commit()
+        return jsonify({'message' :'Changed successfully!'})
+    else:
+        return jsonify({'message' :'Couldnt change'})
+
+
+@app.route('/api/submit/<int:id>', methods=['GET'])
+@login_required
+def submit(id):
+    user_id = current_user.id
+
+    # Retrieve the profile information for the current user
+    profile_exists = Profile.query.filter_by(user_id=user_id).first() 
+    education_exists=Education.query.filter_by(user_id=user_id).first() 
+    coverletter_exists=Coverletter.query.filter_by(user_id=user_id).first()
+    documents_exists=Documents.query.filter_by(user_id=user_id).first() 
+    contact_exists=Contact.query.filter_by(user_id=user_id).first() 
+    workexperience_exists=WorkExperience.query.filter_by(user_id=user_id).first()
+    publication_exists=Publication.query.filter_by(user_id=user_id).first()
+    application=Application.query.filter_by(id=id,user_id=user_id).first()
+
+    if application:
+        # If application exists
+        if (profile_exists and education_exists and coverletter_exists  and contact_exists and publication_exists ) or workexperience_exists:
+            application.app_status = True
+            db.session.commit()
+            return jsonify({'message' : 'Application completed'})
+        else:
+            application.app_status = False
+            db.session.commit()
+            return jsonify({'message' : 'Application incomplete'})
+        # If no profile exists, return a message indicating no profile is found
+        
+    return jsonify({'message': 'Application doesnt exist for user'})
+
+
+@app.route('/api/verification', methods=['GET'])
+@login_required
+def get_profile():
+    user_id = current_user.id
+
+    # Retrieve the profile information for the current user
+    user_profile = Profile.query.filter_by(user_id=user_id).first()
+
+    if user_profile:
+        # If a profile exists, return the profile information
+        profile_data = {
+            'FirstName': user_profile.FirstName,
+            'MiddleName': user_profile.MiddleName,
+            'FamilyName': user_profile.FamilyName,
+            'PreviousFamilyName': user_profile.PreviousFamilyName,
+            'Gender': user_profile.Gender,
+            'NIN': user_profile.NIN,
+            'DOB': user_profile.DOB,
+            'POB': user_profile.POB,
+            'StateOfOrigin': user_profile.StateOfOrigin,
+            'LGA': user_profile.LGA,
+            'Photos': user_profile.Photos
+        }
+        return jsonify(profile_data)
+    else:
+        # If no profile exists, return a message indicating no profile is found
+        return jsonify({'message': 'No profile found for the current user'}), 404
 
 
 
