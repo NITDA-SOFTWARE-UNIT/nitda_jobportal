@@ -1138,6 +1138,26 @@ def get_apps_status():
     return jsonify({'Total Applications':total_apps, 'Submitted_apps': submitted_apps, 'pending_apps': pending_apps})
 
 
+@app.route('/api/get_apps_state')
+def get_apps_state():
+    try:
+        # Step 1: Filter completed applications
+        completed_applications = Application.query.filter_by(app_status=1).all()
+
+        # Step 2: Retrieve user IDs from completed applications
+        user_ids = [app.user_id for app in completed_applications]
+
+        # Step 3: Query Profile table to group and count by state
+        profile_counts_by_state = db.session.query(Profile.StateOfOrigin, func.count(Profile.StateOfOrigin)).filter(Profile.user_id.in_(user_ids)).group_by(Profile.StateOfOrigin).all()
+
+        # Convert query result to a dictionary for easier serialization
+        results = [{'state': state, 'count': count} for state, count in profile_counts_by_state]
+
+        return jsonify({'success': True, 'data': results}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+        
 @app.route('/get_all_users', methods=['GET'])
 @login_required
 def get_all_users():
