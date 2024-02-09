@@ -15,6 +15,8 @@ from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 import random
 import string
+from sqlalchemy import func
+
 #Initialize variables
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'use a random string to construct the hash'
@@ -457,6 +459,20 @@ def save_reference(file):
         return file_path
     return None
 
+
+
+@app.route('/api/count', methods=['GET'])
+@login_required
+def complete_application_count_by_gender():
+    # Join Profile and Application tables and count complete applications based on gender
+    application_counts = db.session.query(Profile.Gender, func.count(Application.id)).\
+        join(Application, Profile.user_id == Application.user_id).\
+        filter(Application.app_status == 1).\
+        group_by(Profile.Gender).all()
+
+    application_dict = {gender: count for gender, count in application_counts}
+
+    return jsonify(application_dict)
 
 
 @app.route('/api/change_role',methods=['POST'])
