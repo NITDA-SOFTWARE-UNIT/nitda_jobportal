@@ -3,7 +3,6 @@ import time
 from flask import Flask, abort, request, jsonify, g, url_for,session
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
 from flask_httpauth import HTTPBasicAuth
 import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -461,9 +460,9 @@ def save_reference(file):
 
 
 
-@app.route('/api/count', methods=['GET'])
+@app.route('/api/count_gender', methods=['GET'])
 @login_required
-def complete_application_count_by_gender():
+def count_by_gender():
     # Join Profile and Application tables and count complete applications based on gender
     application_counts = db.session.query(Profile.Gender, func.count(Application.id)).\
         join(Application, Profile.user_id == Application.user_id).\
@@ -1137,25 +1136,6 @@ def get_apps_status():
     pending_apps = Application.query.filter_by(user_id=user_id, app_status=False).count()
     
     return jsonify({'Total Applications':total_apps, 'Submitted_apps': submitted_apps, 'pending_apps': pending_apps})
-
-@app.route('/api/get_apps_state')
-def get_apps_state():
-    try:
-        # Step 1: Filter completed applications
-        completed_applications = Application.query.filter_by(app_status=1).all()
-        
-        # Step 2: Retrieve user IDs from completed applications
-        user_ids = [app.user_id for app in completed_applications]
-        
-        # Step 3: Query Profile table to group and count by state
-        profile_counts_by_state = db.session.query(Profile.StateOfOrigin, func.count(Profile.StateOfOrigin)).filter(Profile.user_id.in_(user_ids)).group_by(Profile.StateOfOrigin).all()
-
-        # Convert query result to a dictionary for easier serialization
-        results = [{'state': state, 'count': count} for state, count in profile_counts_by_state]
-
-        return jsonify({'success': True, 'data': results}), 200
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/get_all_users', methods=['GET'])
